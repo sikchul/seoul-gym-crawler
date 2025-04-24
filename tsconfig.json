@@ -6,7 +6,10 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "rootDir": "src",
+    "rootDirs": [
+      "src",
+      "."
+    ],
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
@@ -16,6 +19,7 @@
     }
   },
   "include": [
+    "drizzle.config.ts",
     "src/**/*"
   ]
 }

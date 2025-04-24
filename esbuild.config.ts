@@ -1,0 +1,48 @@
+import * as esbuild from 'esbuild';
+
+esbuild
+    .build({
+        entryPoints: ['src/scripts/updateFacilities.ts'],
+        bundle: true,
+        platform: 'node',
+        target: 'node22',
+        outfile: 'dist/bundle.js',
+        format: 'esm',
+        external: [
+            './xhr-sync-worker.js',
+            'jsdom',
+            'node-fetch',
+            'drizzle-orm',
+            'postgres',
+            '@supabase/supabase-js',
+            'dotenv',
+            'fs',
+            'path',
+            'crypto',
+            'stream',
+            'http',
+            'https',
+            'zlib',
+            'url',
+            'util',
+            'buffer',
+            'events',
+            'net',
+            'tls',
+            'assert',
+            'os',
+            'vm',
+            'child_process',
+            'string_decoder',
+            'worker_threads',
+        ],
+        sourcemap: true,
+        minify: false,
+        treeShaking: true,
+        mainFields: ['module', 'main'],
+        conditions: ['import', 'module', 'node'],
+        banner: {
+            js: 'import { createRequire } from "module"; const require = createRequire(import.meta.url);',
+        },
+    })
+    .catch(() => process.exit(1));

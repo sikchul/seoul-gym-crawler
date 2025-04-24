@@ -2,12 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import { JSDOM } from 'jsdom';
 import fetch from 'node-fetch';
 
-import { API_KEY, SUPABASE_ANON_KEY, SUPABASE_URL } from '@/config/constants';
+import { API_KEY, OPEN_API_URL, SPORTS_URL, SPORTS_URL_PATH, SUPABASE_ANON_KEY, SUPABASE_URL } from '@/config/constants';
 
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-export interface FacilityData {
+interface FacilityData {
     facilities: {
         list_total_count: number;
         RESULT: {
@@ -18,28 +15,28 @@ export interface FacilityData {
     };
 }
 
-export interface Facility {
+interface Facility {
     FT_IDX: number;
-    AR_CD_NAME: string;         // 자치구명
-    FT_TITLE: string;           // 시설명
-    BK_CD_NAME: string;         // 분류 (공공체육시설, 학교체육시설 등)
-    FT_POST: string;            // 우편번호
-    FT_ADDR: string;            // 기본 주소
-    FT_ADDR_DETAIL: string;     // 상세 주소
-    FT_SIZE: string;            // 규모
-    FT_ORG: string;             // 관리기관
-    FT_PHONE: string;           // 전화번호
-    FT_WD_TIME: string;         // 평일 운영시간
-    FT_WE_TIME: string;         // 주말 운영시간
-    FT_INFO_TIME: string;       // 비고 (공휴일, 성수기 등 특이사항)
-    RT_CD_NAME: string;         // 예약 가능 여부 (가능/불가능)
-    FT_MONEY: string;           // 이용 요금
-    FT_PARK: string;            // 주차 정보
-    FT_HOMEPAGE: string;        // 홈페이지
-    FT_KIND_NAME: string;       // 시설 종류 (수영장, 야구장 등)
-    FT_OPERATION_NAME: string;  // 운영 여부
-    FT_SI: string;              // 부대시설
-    FT_BIGO: string;            // 기타 비고
+    AR_CD_NAME: string;
+    FT_TITLE: string;
+    BK_CD_NAME: string;
+    FT_POST: string;
+    FT_ADDR: string;
+    FT_ADDR_DETAIL: string;
+    FT_SIZE: string;
+    FT_ORG: string;
+    FT_PHONE: string;
+    FT_WD_TIME: string;
+    FT_WE_TIME: string;
+    FT_INFO_TIME: string;
+    RT_CD_NAME: string;
+    FT_MONEY: string;
+    FT_PARK: string;
+    FT_HOMEPAGE: string;
+    FT_KIND_NAME: string;
+    FT_OPERATION_NAME: string;
+    FT_SI: string;
+    FT_BIGO: string;
 }
 
 type LowercaseKeys<T> = T extends Array<unknown>
@@ -50,9 +47,11 @@ type LowercaseKeys<T> = T extends Array<unknown>
     }
     : T;
 
-export interface FacilityWithImages extends LowercaseKeys<Facility> {
+interface FacilityWithImages extends LowercaseKeys<Facility> {
     images: string[];
 }
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function toLowerCaseKeys<T>(obj: T): LowercaseKeys<T> {
     if (Array.isArray(obj)) {
@@ -69,13 +68,14 @@ function toLowerCaseKeys<T>(obj: T): LowercaseKeys<T> {
 }
 
 async function fetchAllFacilities(): Promise<LowercaseKeys<Facility>[]> {
-    const BASE_URL = `http://openapi.seoul.go.kr:8088/${API_KEY}/json/facilities`;
+    const BASE_URL = `${OPEN_API_URL}/${API_KEY}/json/facilities`;
     const firstPageRes = await fetch(`${BASE_URL}/1/1`);
     const firstPageData = await (firstPageRes.json() as Promise<FacilityData>);
     const totalCount = firstPageData.facilities.list_total_count;
 
     const promises: Promise<FacilityData>[] = [];
     const pageSize = 1000;
+
     for (let start = 1; start <= totalCount; start += pageSize) {
         const end = Math.min(start + pageSize - 1, totalCount);
         const url = `${BASE_URL}/${start}/${end}`;
@@ -83,27 +83,26 @@ async function fetchAllFacilities(): Promise<LowercaseKeys<Facility>[]> {
     }
 
     const allData = await Promise.all(promises);
-    const rows = allData.flatMap(data => toLowerCaseKeys(data.facilities.row));
-    return rows;
+    return allData.flatMap(data => toLowerCaseKeys(data.facilities.row));
 }
 
 async function fetchImages(ft_idx: number): Promise<string[]> {
-    const url = `https://sports.seoul.go.kr/main/facilities/facilities_view.do?cp=1&ar_cd=&sk_cd=&sv=&ft_idx=${ft_idx}`;
+    const url = `${SPORTS_URL}${SPORTS_URL_PATH}?cp=1&ar_cd=&sk_cd=&sv=&ft_idx=${ft_idx}`;
     try {
         const res = await fetch(url);
         const html = await res.text();
         const dom = new JSDOM(html);
         const imgs = dom.window.document.querySelectorAll('.fac-tab-content img');
-        return Array.from(imgs).map(img => `https://sports.seoul.go.kr${(img as HTMLImageElement).src}`);
+        return Array.from(imgs).map(img => `${SPORTS_URL}${(img as HTMLImageElement).src}`);
     } catch (error) {
         console.error(`Error fetching images for ft_idx ${ft_idx}:`, error);
         return [];
     }
 }
 
-async function upsertFacilities(facilities: Facility[]) {
+async function upsertFacilities(facilities: FacilityWithImages[]) {
     const { error } = await supabase.from('facilities').upsert(facilities, {
-        onConflict: 'FT_IDX'
+        onConflict: 'ft_idx'
     });
     if (error) {
         console.error('Supabase upsert error:', error);
@@ -124,7 +123,7 @@ async function main() {
     }
 
     console.log('Upserting to Supabase...');
-    // await upsertFacilities(enrichedFacilities);
+    await upsertFacilities(enrichedFacilities);
     console.log('Done.');
 }
 
