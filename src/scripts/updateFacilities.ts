@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { JSDOM } from 'jsdom';
 import fetch from 'node-fetch';
+import PQueue from 'p-queue';
 
 import { API_KEY, OPEN_API_URL, SPORTS_URL, SPORTS_URL_PATH, SUPABASE_ANON_KEY, SUPABASE_URL } from '@/config/constants';
 
@@ -115,12 +116,20 @@ async function main() {
     const rawFacilities = await fetchAllFacilities();
     console.log(`Fetched ${rawFacilities.length} facilities.`);
 
+    const queue = new PQueue({ concurrency: 10 });
+
     const enrichedFacilities: FacilityWithImages[] = [];
 
-    for (const facility of rawFacilities) {
-        const images = await fetchImages(facility.ft_idx);
-        enrichedFacilities.push({ ...facility, images });
-    }
+    const imagePromises = rawFacilities.map((facility) =>
+        queue.add(async () => {
+            const images = await fetchImages(facility.ft_idx);
+            return { ...facility, images };
+        }) as Promise<FacilityWithImages>
+    );
+
+    const results = await Promise.all(imagePromises);
+
+    enrichedFacilities.push(...results);
 
     console.log('Upserting to Supabase...');
     await upsertFacilities(enrichedFacilities);
