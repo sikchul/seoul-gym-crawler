@@ -6,6 +6,15 @@ on:
 jobs:
   build-and-execute:
     runs-on: ubuntu-latest
+    environment: secrets
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      API_KEY: ${{ secrets. API_KEY }}
+      OPEN_API_URL: ${{ secrets.OPEN_API_URL }}
+      SPORTS_URL: ${{ secrets.SPORTS_URL }}
+      SPORTS_URL_PATH: ${{ secrets.SPORTS_URL_PATH }}
     
     steps:
       - name: Checkout code
