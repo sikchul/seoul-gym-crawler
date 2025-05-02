@@ -1,0 +1,1 @@
+ALTER TABLE "facilities" ADD COLUMN "stats" jsonb DEFAULT '{"comments":0,"likes":0}'::jsonb NOT NULL;

@@ -1,4 +1,4 @@
-import { bigint, pgTable, text } from 'drizzle-orm/pg-core';
+import { bigint, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 
 export const facilities = pgTable('facilities', {
     ft_idx: bigint({ mode: 'number' }).primaryKey(),
@@ -23,4 +23,5 @@ export const facilities = pgTable('facilities', {
     ft_si: text().notNull().default(''),
     ft_bigo: text().notNull().default(''),
     images: text().array().notNull().default([]),
+    stats: jsonb().notNull().default({ comments: 0, likes: 0 }),
 });
